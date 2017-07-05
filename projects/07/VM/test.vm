@@ -1,0 +1,11 @@
+push constant 2
+push constant 225
+add
+pop local 2
+
+push constant 5050
+sub
+push constant 530
+push constant 281
+or
+and
