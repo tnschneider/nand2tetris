@@ -74,6 +74,24 @@ class CodeWriter:
 		#print('writing ', cmd)
 		self._file.write(cmd)
 
+	def writeLabel(self, label):
+		pass
+
+	def writeGoto(self, label):
+		pass
+
+	def writeIf(self, label):
+		pass
+
+	def writeCall(self, functionName, numArgs):
+		pass
+
+	def writeReturn(self):
+		pass
+
+	def writeFunction(self, functionName, numLocals):
+		pass
+
 	def _init(self):
 		return self.Builder().SET_STACK_POINTER('256').result()
 

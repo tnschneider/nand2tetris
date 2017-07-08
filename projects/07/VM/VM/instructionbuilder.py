@@ -1,3 +1,5 @@
+_FRAME_REGISTER = 13
+_RETURN_REGISTER = 14
 _COPY_REGISTER = 15
 def _TEMP_REGISTER(index):
 	index = int(index)
@@ -21,6 +23,7 @@ class InstructionBuilder:
 		self._inst = ''
 		self._labelNum = 0
 		self._labelProvider = labelProvider
+		self._currentFunctionName = ''
 
 	def result(self):
 		return self._inst
@@ -99,13 +102,14 @@ class InstructionBuilder:
 	def EXACT(self, command):
 		cmd = self._ARITHM_DICT[command]
 		return self._pushInst(cmd)
-	def JUMP(self, comp, command, outLabel):
+	def JUMP(self, comp, command, outLabel, inLabel=None):
 		cmd = self._ARITHM_DICT[command]
-		return self.JUMP_EXACT(comp, cmd, outLabel)
-	def JUMP_EXACT(self, comp, jump, outLabel):
-		label = self._getLabel()
-		outLabel["label"] = label
-		return (self.A_INST(label)
+		return self.JUMP_EXACT(comp, cmd, outLabel, inLabel)
+	def JUMP_EXACT(self, comp, jump, outLabel, inLabel=None):
+		if inLabel is None:
+			inLabel = self._getLabel()
+		outLabel["label"] = inLabel
+		return (self.A_INST(inLabel)
 			.C_INST(None, comp, jump))
 		return inst 
 
@@ -177,4 +181,61 @@ class InstructionBuilder:
 			.LOAD_S0_TO_D()
 			.A_INST(symbol)
 			.LOAD_D_TO_M())
+	def PUSH_REG(self, register):
+		return (self.A_INST(register)
+			.LOAD_A_TO_D()
+			.LOAD_D_TO_S0()
+			.INCR_SP())
 
+	def LABEL(self, label):
+		lbl = self._currentFunctionName + '$' + label
+		return self.L_INST(lbl)
+
+	def GOTO(self, label):
+		lbl = self._currentFunctionName + '$' + label
+		return (self.JUMP_EXACT('0', 'JMP', {}, lbl))
+
+	def IF_GOTO(self, label):
+		lbl = self._currentFunctionName + '$' + label
+		return (self.DECR_SP()
+			.LOAD_S0_TO_D()
+			.A_INST(lbl)
+			.JUMP_EXACT('D', 'JNE', {}, lbl))
+
+	def CALL(self, functionName, numArgs):
+		offset = numArgs+5
+		lbl = self._getLabel()
+		return (self.A_INST(lbl)
+			.LOAD_A_TO_D()
+			.LOAD_D_TO_S0()
+			.INCR_SP()
+			.PUSH_REG('LCL')
+			.PUSH_REG('ARG')
+			.PUSH_REG('THIS')
+			.PUSH_REG('THAT')
+			.LOAD_S0_TO_D()
+			.A_INST(str(offset))
+			.C_INST('D', 'D-A')
+			.A_INST('ARG')
+			.C_INST('M', 'D')
+			.LOAD_S0_TO_D()
+			.A_INST('LCL')
+			.C_INST('M', 'D')
+			.A_INST(functionName)
+			.C_INST(None, 0 'JMP')
+			.L_INST(lbl))
+
+	def RETURN(self):
+		return (self.A_INST('LCL')
+			.LOAD_A_TO_D()
+			.A_INST(_FRAME_REGISTER)
+			.LOAD_D_TO_M()
+			.A_INST(_FRAME_REGISTER)
+			.LOAD_M_TO_D()
+			.A_INST('5')
+			.C_INST('A', 'D-A')
+			.LOAD_M_TO_D()
+			.A_INST(_RETURN_REGISTER)
+			.LOAD_D_TO_M()
+			.POP_MEM('ARG', 0)
+			)
