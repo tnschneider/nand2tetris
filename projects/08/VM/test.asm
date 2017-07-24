@@ -36,7 +36,8 @@ M=M+1
 M=M-1
 @2
 D=A
-@LOCAL
+@LCL
+A=M
 D=D+A
 @15
 M=D
